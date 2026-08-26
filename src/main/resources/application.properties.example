@@ -1,0 +1,2 @@
+spring.application.name=meal-planner
+usda.api.key=YOUR_USDA_FDC_API_KEY_HERE
