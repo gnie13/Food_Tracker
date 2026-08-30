@@ -31,4 +31,8 @@ public class Food {
     @Column(nullable = false, columnDefinition = "integer default 0")
     private int timesLogged;
     private Instant lastLoggedAt;
+
+    // Explicitly pinned by the user for quick re-adding, independent of how often it's logged.
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean saved;
 }
