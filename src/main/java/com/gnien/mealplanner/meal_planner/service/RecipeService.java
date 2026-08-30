@@ -91,11 +91,10 @@ public class RecipeService {
 
     private RecipeIngredientResponse toIngredientResponse(RecipeIngredient ingredient) {
         Food food = ingredient.getFood();
-        NutritionTotals nutrition = foodCatalog.macrosOf(food)
-            .scale(ingredient.getServingSize())
-            .rounded();
+        NutritionTotals perServing = foodCatalog.macrosOf(food);
+        NutritionTotals nutrition = perServing.scale(ingredient.getServingSize()).rounded();
         return new RecipeIngredientResponse(
-            ingredient.getId(), food.getId(), food.getName(),
-            ingredient.getServingSize(), nutrition);
+            ingredient.getId(), food.getId(), food.getFdcId(), food.getName(),
+            ingredient.getServingSize(), perServing.rounded(), nutrition);
     }
 }

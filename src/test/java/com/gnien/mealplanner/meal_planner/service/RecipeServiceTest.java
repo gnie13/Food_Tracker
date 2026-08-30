@@ -43,6 +43,10 @@ class RecipeServiceTest {
         assertThat(recipe.totals().calories()).isEqualTo(250.0);
         assertThat(recipe.totals().protein()).isEqualTo(25.0);
         assertThat(foodRepository.count()).isEqualTo(2);
+
+        // Each ingredient carries the raw food values for round-tripping through PUT.
+        assertThat(recipe.ingredients().get(0).fdcId()).isEqualTo(1L);
+        assertThat(recipe.ingredients().get(0).perServing().calories()).isEqualTo(100.0);
     }
 
     @Test
