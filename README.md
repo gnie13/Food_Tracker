@@ -23,6 +23,7 @@ You'll need a free API key from [api.data.gov](https://api.data.gov/signup/) for
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/foods/search?query=` | Search USDA FoodData Central |
+| GET | `/api/foods/frequent?limit=` | Foods logged most often (default 10, max 50), for quick re-adding |
 | POST | `/api/meals/entries` | Log a food against a meal (see body below) |
 | GET | `/api/meals?date=YYYY-MM-DD` | Meals logged on a date, with subtotals |
 | DELETE | `/api/meals/entries/{id}` | Remove a logged entry |
