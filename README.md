@@ -24,6 +24,9 @@ You'll need a free API key from [api.data.gov](https://api.data.gov/signup/) for
 |---|---|---|
 | GET | `/api/foods/search?query=` | Search USDA FoodData Central |
 | GET | `/api/foods/frequent?limit=` | Foods logged most often (default 10, max 50), for quick re-adding |
+| GET | `/api/foods/saved` | Foods you've pinned, alphabetised |
+| PUT | `/api/foods/{id}/saved` | Pin a stored food (idempotent) |
+| DELETE | `/api/foods/{id}/saved` | Unpin a stored food (idempotent) |
 | POST | `/api/meals/entries` | Log a food against a meal (see body below) |
 | GET | `/api/meals?date=YYYY-MM-DD` | Meals logged on a date, with subtotals |
 | DELETE | `/api/meals/entries/{id}` | Remove a logged entry |

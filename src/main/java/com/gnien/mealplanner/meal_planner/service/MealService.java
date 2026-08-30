@@ -5,7 +5,7 @@ import com.gnien.mealplanner.meal_planner.dto.FoodPayload;
 import com.gnien.mealplanner.meal_planner.dto.LogEntryRequest;
 import com.gnien.mealplanner.meal_planner.dto.MealEntryResponse;
 import com.gnien.mealplanner.meal_planner.dto.MealResponse;
-import com.gnien.mealplanner.meal_planner.dto.FrequentFoodResponse;
+import com.gnien.mealplanner.meal_planner.dto.StoredFoodResponse;
 import com.gnien.mealplanner.meal_planner.dto.NutritionTotals;
 import com.gnien.mealplanner.meal_planner.dto.RangeSummary;
 import com.gnien.mealplanner.meal_planner.model.Food;
@@ -84,17 +84,39 @@ public class MealService {
 
     /** Foods the user logs most often, most-used first (ties broken by recency). */
     @Transactional(readOnly = true)
-    public List<FrequentFoodResponse> frequentFoods(int limit) {
+    public List<StoredFoodResponse> frequentFoods(int limit) {
         int capped = Math.clamp(limit, 1, MAX_FREQUENT);
         return foodRepository
             .findByTimesLoggedGreaterThanOrderByTimesLoggedDescLastLoggedAtDesc(
                 0, PageRequest.of(0, capped))
             .stream()
-            .map(f -> new FrequentFoodResponse(
-                f.getId(), f.getFdcId(), f.getName(),
-                f.getCalories(), f.getProtein(), f.getCarbs(), f.getFat(),
-                f.getTimesLogged(), f.getLastLoggedAt()))
+            .map(MealService::toStoredFoodResponse)
             .toList();
+    }
+
+    /** Foods the user has explicitly pinned, by name. */
+    @Transactional(readOnly = true)
+    public List<StoredFoodResponse> savedFoods() {
+        return foodRepository.findBySavedTrueOrderByNameAsc().stream()
+            .map(MealService::toStoredFoodResponse)
+            .toList();
+    }
+
+    /** Pin or unpin a stored food. */
+    @Transactional
+    public StoredFoodResponse setSaved(Long foodId, boolean saved) {
+        Food food = foodRepository.findById(foodId)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "No food with id " + foodId));
+        food.setSaved(saved);
+        return toStoredFoodResponse(foodRepository.save(food));
+    }
+
+    private static StoredFoodResponse toStoredFoodResponse(Food f) {
+        return new StoredFoodResponse(
+            f.getId(), f.getFdcId(), f.getName(),
+            f.getCalories(), f.getProtein(), f.getCarbs(), f.getFat(),
+            f.getTimesLogged(), f.getLastLoggedAt(), f.isSaved());
     }
 
     /** Reuse an already-stored food by its USDA id, otherwise save the payload. */
