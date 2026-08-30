@@ -24,6 +24,7 @@ You'll need a free API key from [api.data.gov](https://api.data.gov/signup/) for
 |---|---|---|
 | GET | `/api/foods/search?query=` | Search USDA FoodData Central |
 | POST | `/api/meals/entries` | Log a food against a meal (see body below) |
+| PATCH | `/api/meals/entries/{id}` | Edit an entry — change `servingSize`, or move it to another `date`/`mealType` |
 | GET | `/api/meals?date=YYYY-MM-DD` | Meals logged on a date, with subtotals |
 | DELETE | `/api/meals/entries/{id}` | Remove a logged entry |
 | GET | `/api/summary?date=YYYY-MM-DD` | Daily macro totals + per-meal breakdown |
