@@ -3,12 +3,14 @@ package com.gnien.mealplanner.meal_planner.controller;
 import com.gnien.mealplanner.meal_planner.dto.LogEntryRequest;
 import com.gnien.mealplanner.meal_planner.dto.LogRecipeRequest;
 import com.gnien.mealplanner.meal_planner.dto.MealResponse;
+import com.gnien.mealplanner.meal_planner.dto.UpdateEntryRequest;
 import com.gnien.mealplanner.meal_planner.service.MealService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -49,6 +51,16 @@ public class MealController {
     public List<MealResponse> meals(
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return mealService.mealsForDate(date);
+    }
+
+    /**
+     * Partially update a logged entry — change its serving size and/or move it
+     * to another date or meal type. Returns the meal the entry now belongs to.
+     */
+    @PatchMapping("/entries/{id}")
+    public MealResponse updateEntry(
+        @PathVariable Long id, @Valid @RequestBody UpdateEntryRequest request) {
+        return mealService.updateEntry(id, request);
     }
 
     @DeleteMapping("/entries/{id}")

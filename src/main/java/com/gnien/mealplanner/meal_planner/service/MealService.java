@@ -8,6 +8,7 @@ import com.gnien.mealplanner.meal_planner.dto.MealResponse;
 import com.gnien.mealplanner.meal_planner.dto.StoredFoodResponse;
 import com.gnien.mealplanner.meal_planner.dto.NutritionTotals;
 import com.gnien.mealplanner.meal_planner.dto.RangeSummary;
+import com.gnien.mealplanner.meal_planner.dto.UpdateEntryRequest;
 import com.gnien.mealplanner.meal_planner.model.Food;
 import com.gnien.mealplanner.meal_planner.model.Meal;
 import com.gnien.mealplanner.meal_planner.model.MealEntry;
@@ -188,6 +189,53 @@ public class MealService {
             .reduce(NutritionTotals.zero(), NutritionTotals::plus)
             .rounded();
         return new RangeSummary(startDate, endDate, totals, days);
+    }
+
+    /**
+     * Apply a partial update to a logged entry. A non-null {@code date} or
+     * {@code mealType} moves the entry to the matching meal, creating that meal
+     * on demand. The old meal is left in place even if it ends up empty — the
+     * same way {@link #deleteEntry} leaves empty meals behind.
+     */
+    @Transactional
+    public MealResponse updateEntry(Long entryId, UpdateEntryRequest request) {
+        if (request.isEmpty()) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST, "update request must set at least one field");
+        }
+
+        MealEntry entry = mealEntryRepository.findById(entryId)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "No meal entry with id " + entryId));
+
+        if (request.servingSize() != null) {
+            entry.setServingSize(request.servingSize());
+        }
+
+        Meal current = entry.getMeal();
+        LocalDate targetDate = request.date() != null ? request.date() : current.getDate();
+        Meal.MealType targetType =
+            request.mealType() != null ? request.mealType() : current.getMealType();
+
+        if (targetDate.equals(current.getDate()) && targetType == current.getMealType()) {
+            return toResponse(current);
+        }
+
+        Meal target = mealRepository.findByDateAndMealType(targetDate, targetType)
+            .orElseGet(() -> {
+                Meal fresh = new Meal();
+                fresh.setDate(targetDate);
+                fresh.setMealType(targetType);
+                return mealRepository.save(fresh);
+            });
+
+        // Move via the owning side (MealEntry.meal) only. Removing the entry from
+        // current.getEntries() would trip orphanRemoval and delete the row.
+        entry.setMeal(target);
+        target.getEntries().add(entry);
+        mealEntryRepository.save(entry);
+
+        return toResponse(target);
     }
 
     @Transactional

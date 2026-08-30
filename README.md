@@ -29,6 +29,7 @@ You'll need a free API key from [api.data.gov](https://api.data.gov/signup/) for
 | DELETE | `/api/foods/{id}/saved` | Unpin a stored food (idempotent) |
 | POST | `/api/meals/entries` | Log a food against a meal (see body below) |
 | POST | `/api/meals/entries/from-recipe` | Log a whole recipe against a meal (`{date, mealType, recipeId, factor}`) |
+| PATCH | `/api/meals/entries/{id}` | Edit an entry — change `servingSize`, or move it to another `date`/`mealType` |
 | GET | `/api/meals?date=YYYY-MM-DD` | Meals logged on a date, with subtotals |
 | DELETE | `/api/meals/entries/{id}` | Remove a logged entry |
 | GET | `/api/summary?date=YYYY-MM-DD` | Daily macro totals + per-meal breakdown |
