@@ -1,2 +1,9 @@
 spring.application.name=meal-planner
 usda.api.key=YOUR_USDA_FDC_API_KEY_HERE
+
+# File-backed H2 so logged meals survive restarts. Delete ./data to reset.
+spring.datasource.url=jdbc:h2:file:./data/mealplanner
+spring.datasource.username=sa
+spring.datasource.password=
+spring.jpa.hibernate.ddl-auto=update
+spring.h2.console.enabled=true

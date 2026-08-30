@@ -34,3 +34,9 @@ build/
 
 ### Secrets ###
 src/main/resources/application.properties
+
+### Local H2 database ###
+/data/
+
+### Claude Code ###
+CLAUDE.md
