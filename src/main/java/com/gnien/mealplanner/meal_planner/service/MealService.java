@@ -5,6 +5,7 @@ import com.gnien.mealplanner.meal_planner.dto.FoodPayload;
 import com.gnien.mealplanner.meal_planner.dto.LogEntryRequest;
 import com.gnien.mealplanner.meal_planner.dto.MealEntryResponse;
 import com.gnien.mealplanner.meal_planner.dto.MealResponse;
+import com.gnien.mealplanner.meal_planner.dto.FrequentFoodResponse;
 import com.gnien.mealplanner.meal_planner.dto.NutritionTotals;
 import com.gnien.mealplanner.meal_planner.dto.RangeSummary;
 import com.gnien.mealplanner.meal_planner.model.Food;
@@ -13,11 +14,13 @@ import com.gnien.mealplanner.meal_planner.model.MealEntry;
 import com.gnien.mealplanner.meal_planner.repository.FoodRepository;
 import com.gnien.mealplanner.meal_planner.repository.MealEntryRepository;
 import com.gnien.mealplanner.meal_planner.repository.MealRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -28,6 +31,9 @@ public class MealService {
 
     /** Guard against an accidental multi-year range that would run a DB query per day. */
     private static final long MAX_RANGE_DAYS = 366;
+
+    /** Hard ceiling on the "frequently added" list, whatever limit the caller asks for. */
+    private static final int MAX_FREQUENT = 50;
 
     private final MealRepository mealRepository;
     private final MealEntryRepository mealEntryRepository;
@@ -57,6 +63,7 @@ public class MealService {
             });
 
         Food food = resolveFood(request.food());
+        recordUsage(food);
 
         MealEntry entry = new MealEntry();
         entry.setMeal(meal);
@@ -66,6 +73,28 @@ public class MealService {
         mealEntryRepository.save(entry);
 
         return toResponse(meal);
+    }
+
+    /** Count this food as logged once more, right now — feeds the frequently-added list. */
+    private void recordUsage(Food food) {
+        food.setTimesLogged(food.getTimesLogged() + 1);
+        food.setLastLoggedAt(Instant.now());
+        foodRepository.save(food);
+    }
+
+    /** Foods the user logs most often, most-used first (ties broken by recency). */
+    @Transactional(readOnly = true)
+    public List<FrequentFoodResponse> frequentFoods(int limit) {
+        int capped = Math.clamp(limit, 1, MAX_FREQUENT);
+        return foodRepository
+            .findByTimesLoggedGreaterThanOrderByTimesLoggedDescLastLoggedAtDesc(
+                0, PageRequest.of(0, capped))
+            .stream()
+            .map(f -> new FrequentFoodResponse(
+                f.getId(), f.getFdcId(), f.getName(),
+                f.getCalories(), f.getProtein(), f.getCarbs(), f.getFat(),
+                f.getTimesLogged(), f.getLastLoggedAt()))
+            .toList();
     }
 
     /** Reuse an already-stored food by its USDA id, otherwise save the payload. */
