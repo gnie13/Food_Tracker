@@ -18,6 +18,32 @@ You'll need a free API key from [api.data.gov](https://api.data.gov/signup/) for
 2. Drop your API key in
 3. `./mvnw spring-boot:run`
 
+## API
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/foods/search?query=` | Search USDA FoodData Central |
+| GET | `/api/foods/frequent?limit=` | Foods logged most often (default 10, max 50), for quick re-adding |
+| POST | `/api/meals/entries` | Log a food against a meal (see body below) |
+| GET | `/api/meals?date=YYYY-MM-DD` | Meals logged on a date, with subtotals |
+| DELETE | `/api/meals/entries/{id}` | Remove a logged entry |
+| GET | `/api/summary?date=YYYY-MM-DD` | Daily macro totals + per-meal breakdown |
+| GET | `/api/summary/range?startDate=&endDate=` | Totals across a date range, one entry per day (weekly view) |
+
+`POST /api/meals/entries` body — `food` is normally copied straight from a search result:
+
+```json
+{
+  "date": "2026-08-29",
+  "mealType": "BREAKFAST",
+  "servingSize": 1.5,
+  "food": { "fdcId": 173904, "name": "Oatmeal, dry", "calories": 380, "protein": 13, "carbs": 67, "fat": 7 }
+}
+```
+
+`servingSize` is a multiplier on the food's stored macros (1.5 = one and a half of whatever USDA reported).
+
 ## Status
 
-Core food search + meal logging works. Still missing a frontend and daily/weekly nutrition summaries.
+Food search, meal logging, and daily/weekly nutrition summaries all work. H2 is file-backed
+(`./data/`), so logged meals survive restarts. Still missing a frontend.
