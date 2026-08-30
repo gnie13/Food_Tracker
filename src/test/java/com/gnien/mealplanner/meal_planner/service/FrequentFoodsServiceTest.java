@@ -1,7 +1,7 @@
 package com.gnien.mealplanner.meal_planner.service;
 
 import com.gnien.mealplanner.meal_planner.dto.FoodPayload;
-import com.gnien.mealplanner.meal_planner.dto.FrequentFoodResponse;
+import com.gnien.mealplanner.meal_planner.dto.StoredFoodResponse;
 import com.gnien.mealplanner.meal_planner.dto.LogEntryRequest;
 import com.gnien.mealplanner.meal_planner.model.Meal;
 import com.gnien.mealplanner.meal_planner.repository.FoodRepository;
@@ -50,9 +50,9 @@ class FrequentFoodsServiceTest {
         log(2L, "AlsoRare", 1);   // same count, logged later
         log(3L, "Common", 5);
 
-        List<FrequentFoodResponse> frequent = mealService.frequentFoods(10);
+        List<StoredFoodResponse> frequent = mealService.frequentFoods(10);
 
-        assertThat(frequent).extracting(FrequentFoodResponse::name)
+        assertThat(frequent).extracting(StoredFoodResponse::name)
             .containsExactly("Common", "AlsoRare", "Rare");
         assertThat(frequent.get(0).timesLogged()).isEqualTo(5);
     }
@@ -63,7 +63,7 @@ class FrequentFoodsServiceTest {
         log(2L, "B", 3);
         log(3L, "C", 2);
 
-        assertThat(mealService.frequentFoods(2)).extracting(FrequentFoodResponse::name)
+        assertThat(mealService.frequentFoods(2)).extracting(StoredFoodResponse::name)
             .containsExactly("A", "B");
         assertThat(mealService.frequentFoods(0)).hasSize(1);      // clamped up to 1
         assertThat(mealService.frequentFoods(999)).hasSize(3);    // clamped down to what exists
