@@ -16,7 +16,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
-@Import(MealService.class)
+@Import({MealService.class, FoodCatalogService.class})
 class FrequentFoodsServiceTest {
 
     private static final LocalDate DAY = LocalDate.of(2026, 8, 30);

@@ -28,10 +28,16 @@ You'll need a free API key from [api.data.gov](https://api.data.gov/signup/) for
 | PUT | `/api/foods/{id}/saved` | Pin a stored food (idempotent) |
 | DELETE | `/api/foods/{id}/saved` | Unpin a stored food (idempotent) |
 | POST | `/api/meals/entries` | Log a food against a meal (see body below) |
+| POST | `/api/meals/entries/from-recipe` | Log a whole recipe against a meal (`{date, mealType, recipeId, factor}`) |
 | GET | `/api/meals?date=YYYY-MM-DD` | Meals logged on a date, with subtotals |
 | DELETE | `/api/meals/entries/{id}` | Remove a logged entry |
 | GET | `/api/summary?date=YYYY-MM-DD` | Daily macro totals + per-meal breakdown |
 | GET | `/api/summary/range?startDate=&endDate=` | Totals across a date range, one entry per day (weekly view) |
+| POST | `/api/recipes` | Create a recipe (`{name, ingredients: [{food, servingSize}]}`) |
+| GET | `/api/recipes` | All saved recipes, with per-batch macro totals |
+| GET | `/api/recipes/{id}` | One recipe |
+| PUT | `/api/recipes/{id}` | Replace a recipe's name and ingredients |
+| DELETE | `/api/recipes/{id}` | Delete a recipe |
 
 `POST /api/meals/entries` body — `food` is normally copied straight from a search result:
 
@@ -45,6 +51,10 @@ You'll need a free API key from [api.data.gov](https://api.data.gov/signup/) for
 ```
 
 `servingSize` is a multiplier on the food's stored macros (1.5 = one and a half of whatever USDA reported).
+
+A recipe's ingredients carry their own base `servingSize`; logging one with `factor` scales every
+ingredient (`factor: 0.5` logs half a batch). Each ingredient lands as its own meal entry, so it still
+edits and deletes per-food.
 
 ## Status
 

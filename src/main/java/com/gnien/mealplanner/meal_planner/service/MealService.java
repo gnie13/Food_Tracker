@@ -1,8 +1,8 @@
 package com.gnien.mealplanner.meal_planner.service;
 
 import com.gnien.mealplanner.meal_planner.dto.DailySummary;
-import com.gnien.mealplanner.meal_planner.dto.FoodPayload;
 import com.gnien.mealplanner.meal_planner.dto.LogEntryRequest;
+import com.gnien.mealplanner.meal_planner.dto.LogRecipeRequest;
 import com.gnien.mealplanner.meal_planner.dto.MealEntryResponse;
 import com.gnien.mealplanner.meal_planner.dto.MealResponse;
 import com.gnien.mealplanner.meal_planner.dto.StoredFoodResponse;
@@ -11,16 +11,18 @@ import com.gnien.mealplanner.meal_planner.dto.RangeSummary;
 import com.gnien.mealplanner.meal_planner.model.Food;
 import com.gnien.mealplanner.meal_planner.model.Meal;
 import com.gnien.mealplanner.meal_planner.model.MealEntry;
+import com.gnien.mealplanner.meal_planner.model.Recipe;
+import com.gnien.mealplanner.meal_planner.model.RecipeIngredient;
 import com.gnien.mealplanner.meal_planner.repository.FoodRepository;
 import com.gnien.mealplanner.meal_planner.repository.MealEntryRepository;
 import com.gnien.mealplanner.meal_planner.repository.MealRepository;
+import com.gnien.mealplanner.meal_planner.repository.RecipeRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -38,13 +40,19 @@ public class MealService {
     private final MealRepository mealRepository;
     private final MealEntryRepository mealEntryRepository;
     private final FoodRepository foodRepository;
+    private final RecipeRepository recipeRepository;
+    private final FoodCatalogService foodCatalog;
 
     public MealService(MealRepository mealRepository,
                        MealEntryRepository mealEntryRepository,
-                       FoodRepository foodRepository) {
+                       FoodRepository foodRepository,
+                       RecipeRepository recipeRepository,
+                       FoodCatalogService foodCatalog) {
         this.mealRepository = mealRepository;
         this.mealEntryRepository = mealEntryRepository;
         this.foodRepository = foodRepository;
+        this.recipeRepository = recipeRepository;
+        this.foodCatalog = foodCatalog;
     }
 
     /**
@@ -62,24 +70,48 @@ public class MealService {
                 return mealRepository.save(fresh);
             });
 
-        Food food = resolveFood(request.food());
-        recordUsage(food);
+        Food food = foodCatalog.resolveFood(request.food());
+        foodCatalog.recordUsage(food);
 
-        MealEntry entry = new MealEntry();
-        entry.setMeal(meal);
-        entry.setFood(food);
-        entry.setServingSize(request.servingSize());
-        meal.getEntries().add(entry);
-        mealEntryRepository.save(entry);
-
+        addEntry(meal, food, request.servingSize());
         return toResponse(meal);
     }
 
-    /** Count this food as logged once more, right now — feeds the frequently-added list. */
-    private void recordUsage(Food food) {
-        food.setTimesLogged(food.getTimesLogged() + 1);
-        food.setLastLoggedAt(Instant.now());
-        foodRepository.save(food);
+    /**
+     * Log a whole recipe against a meal, one entry per ingredient with its
+     * serving size scaled by the request's factor. The meal is created on first
+     * use, and every ingredient counts towards the frequently-added list.
+     */
+    @Transactional
+    public MealResponse logRecipe(LogRecipeRequest request) {
+        Recipe recipe = recipeRepository.findById(request.recipeId())
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "No recipe with id " + request.recipeId()));
+
+        Meal meal = mealRepository
+            .findByDateAndMealType(request.date(), request.mealType())
+            .orElseGet(() -> {
+                Meal fresh = new Meal();
+                fresh.setDate(request.date());
+                fresh.setMealType(request.mealType());
+                return mealRepository.save(fresh);
+            });
+
+        for (RecipeIngredient ingredient : recipe.getIngredients()) {
+            Food food = ingredient.getFood();
+            foodCatalog.recordUsage(food);
+            addEntry(meal, food, ingredient.getServingSize() * request.factor());
+        }
+        return toResponse(meal);
+    }
+
+    private void addEntry(Meal meal, Food food, double servingSize) {
+        MealEntry entry = new MealEntry();
+        entry.setMeal(meal);
+        entry.setFood(food);
+        entry.setServingSize(servingSize);
+        meal.getEntries().add(entry);
+        mealEntryRepository.save(entry);
     }
 
     /** Foods the user logs most often, most-used first (ties broken by recency). */
@@ -117,21 +149,6 @@ public class MealService {
             f.getId(), f.getFdcId(), f.getName(),
             f.getCalories(), f.getProtein(), f.getCarbs(), f.getFat(),
             f.getTimesLogged(), f.getLastLoggedAt(), f.isSaved());
-    }
-
-    /** Reuse an already-stored food by its USDA id, otherwise save the payload. */
-    private Food resolveFood(FoodPayload payload) {
-        return foodRepository.findByFdcId(payload.fdcId())
-            .orElseGet(() -> {
-                Food food = new Food();
-                food.setFdcId(payload.fdcId());
-                food.setName(payload.name());
-                food.setCalories(payload.calories());
-                food.setProtein(payload.protein());
-                food.setCarbs(payload.carbs());
-                food.setFat(payload.fat());
-                return foodRepository.save(food);
-            });
     }
 
     @Transactional(readOnly = true)
@@ -196,9 +213,9 @@ public class MealService {
 
     private MealEntryResponse toEntryResponse(MealEntry entry) {
         Food food = entry.getFood();
-        NutritionTotals nutrition = new NutritionTotals(
-            food.getCalories(), food.getProtein(), food.getCarbs(), food.getFat()
-        ).scale(entry.getServingSize()).rounded();
+        NutritionTotals nutrition = foodCatalog.macrosOf(food)
+            .scale(entry.getServingSize())
+            .rounded();
         return new MealEntryResponse(
             entry.getId(), food.getId(), food.getName(), entry.getServingSize(), nutrition);
     }
