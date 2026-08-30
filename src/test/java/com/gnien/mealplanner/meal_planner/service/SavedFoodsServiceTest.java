@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
-@Import(MealService.class)
+@Import({MealService.class, FoodCatalogService.class})
 class SavedFoodsServiceTest {
 
     private static final LocalDate DAY = LocalDate.of(2026, 8, 30);

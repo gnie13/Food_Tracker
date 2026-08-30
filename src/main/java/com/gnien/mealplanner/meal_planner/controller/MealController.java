@@ -1,6 +1,7 @@
 package com.gnien.mealplanner.meal_planner.controller;
 
 import com.gnien.mealplanner.meal_planner.dto.LogEntryRequest;
+import com.gnien.mealplanner.meal_planner.dto.LogRecipeRequest;
 import com.gnien.mealplanner.meal_planner.dto.MealResponse;
 import com.gnien.mealplanner.meal_planner.dto.UpdateEntryRequest;
 import com.gnien.mealplanner.meal_planner.service.MealService;
@@ -36,6 +37,13 @@ public class MealController {
     @ResponseStatus(HttpStatus.CREATED)
     public MealResponse logEntry(@Valid @RequestBody LogEntryRequest request) {
         return mealService.logEntry(request);
+    }
+
+    /** Log a whole recipe against a meal, one entry per ingredient scaled by {@code factor}. */
+    @PostMapping("/entries/from-recipe")
+    @ResponseStatus(HttpStatus.CREATED)
+    public MealResponse logRecipe(@Valid @RequestBody LogRecipeRequest request) {
+        return mealService.logRecipe(request);
     }
 
     /** All meals logged on a date, e.g. {@code /api/meals?date=2026-08-29}. */
