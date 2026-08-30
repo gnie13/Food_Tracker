@@ -34,6 +34,8 @@ public class FoodCatalogService {
                 food.setProtein(payload.protein());
                 food.setCarbs(payload.carbs());
                 food.setFat(payload.fat());
+                food.setServingGrams(payload.servingGrams());
+                food.setServingText(payload.servingText());
                 return foodRepository.save(food);
             });
     }

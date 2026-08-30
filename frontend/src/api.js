@@ -27,7 +27,8 @@ const body = (data) => ({ body: JSON.stringify(data) })
 export const api = {
   // Foods
   searchFoods: (query) => request(`/foods/search?query=${encodeURIComponent(query)}`),
-  frequentFoods: (limit = 12) => request(`/foods/frequent?limit=${limit}`),
+  frequentFoods: (mealType, limit = 12) =>
+    request(`/foods/frequent?limit=${limit}${mealType ? `&mealType=${mealType}` : ''}`),
   savedFoods: () => request('/foods/saved'),
   saveFood: (foodId) => request(`/foods/${foodId}/saved`, { method: 'PUT' }),
   unsaveFood: (foodId) => request(`/foods/${foodId}/saved`, { method: 'DELETE' }),

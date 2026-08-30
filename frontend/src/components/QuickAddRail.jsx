@@ -16,7 +16,7 @@ export default function QuickAddRail({ date, targetMeal, onTargetMealChange, onC
     setError(null)
     try {
       const [f, s, r] = await Promise.all([
-        api.frequentFoods(12),
+        api.frequentFoods(targetMeal, 12),
         api.savedFoods(),
         api.recipes(),
       ])
@@ -26,17 +26,19 @@ export default function QuickAddRail({ date, targetMeal, onTargetMealChange, onC
     } catch (e) {
       setError(e.message)
     }
-  }, [])
+  }, [targetMeal])
 
   useEffect(() => { load() }, [load, refreshKey])
 
   async function addFood(food) {
     setPendingId(`food-${food.foodId}`)
     try {
+      // One serving if the food carries a weight, else 100 g (multiplier 1).
+      const servingSize = food.servingGrams ? food.servingGrams / 100 : 1
       await api.logEntry({
         date,
         mealType: targetMeal,
-        servingSize: 1,
+        servingSize,
         food: {
           fdcId: food.fdcId,
           name: food.name,
@@ -44,6 +46,8 @@ export default function QuickAddRail({ date, targetMeal, onTargetMealChange, onC
           protein: food.protein,
           carbs: food.carbs,
           fat: food.fat,
+          servingGrams: food.servingGrams ?? null,
+          servingText: food.servingText ?? null,
         },
       })
       onChanged()
@@ -84,8 +88,10 @@ export default function QuickAddRail({ date, targetMeal, onTargetMealChange, onC
 
       {error && <p className="error">{error}</p>}
 
-      <RailGroup title="Frequent">
-        {frequent.length === 0 && <li className="muted">Nothing logged yet.</li>}
+      <RailGroup title={`Frequent · ${mealLabel(targetMeal)}`}>
+        {frequent.length === 0 && (
+          <li className="muted">Nothing logged at {mealLabel(targetMeal).toLowerCase()} yet.</li>
+        )}
         {frequent.map((food) => (
           <li key={food.foodId} className="rail-item">
             <button
@@ -94,7 +100,9 @@ export default function QuickAddRail({ date, targetMeal, onTargetMealChange, onC
               onClick={() => addFood(food)}
             >
               <span className="rail-name">{food.name}</span>
-              <span className="rail-sub">{kcal(food.calories)} · logged {food.timesLogged}×</span>
+              <span className="rail-sub">
+                {kcal(food.calories)}/100g · {food.timesLogged}× here
+              </span>
             </button>
             <button
               className={`star${food.saved ? ' on' : ''}`}
@@ -117,7 +125,9 @@ export default function QuickAddRail({ date, targetMeal, onTargetMealChange, onC
               onClick={() => addFood(food)}
             >
               <span className="rail-name">{food.name}</span>
-              <span className="rail-sub">{kcal(food.calories)}</span>
+              <span className="rail-sub">
+                {kcal(food.calories)}/100g{food.servingText ? ` · ${food.servingText}` : ''}
+              </span>
             </button>
             <button className="star on" title="Unpin" onClick={() => togglePin(food, false)}>★</button>
           </li>
@@ -142,7 +152,9 @@ export default function QuickAddRail({ date, targetMeal, onTargetMealChange, onC
         ))}
       </RailGroup>
 
-      <p className="rail-hint muted">Adds one serving / one batch to {mealLabel(targetMeal)}.</p>
+      <p className="rail-hint muted">
+        Adds one serving (or 100 g) / one batch to {mealLabel(targetMeal)}.
+      </p>
     </aside>
   )
 }

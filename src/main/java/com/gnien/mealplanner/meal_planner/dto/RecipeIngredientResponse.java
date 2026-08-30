@@ -2,8 +2,10 @@ package com.gnien.mealplanner.meal_planner.dto;
 
 /**
  * One ingredient of a recipe. {@code nutrition} is scaled by {@code servingSize};
- * {@code fdcId} and {@code perServing} are the raw food values, so a client can
- * round-trip the ingredient back through {@code PUT /api/recipes/{id}}.
+ * {@code fdcId} and {@code perServing} (per 100 g) let a client round-trip the
+ * ingredient back through {@code PUT /api/recipes/{id}}. {@code grams} is the
+ * weight the ingredient represents; {@code servingGrams}/{@code servingText}
+ * echo the food's USDA serving hint.
  */
 public record RecipeIngredientResponse(
     Long id,
@@ -11,6 +13,9 @@ public record RecipeIngredientResponse(
     Long fdcId,
     String foodName,
     double servingSize,
+    double grams,
+    Double servingGrams,
+    String servingText,
     NutritionTotals perServing,
     NutritionTotals nutrition
 ) {

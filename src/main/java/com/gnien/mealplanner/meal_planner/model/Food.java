@@ -20,10 +20,17 @@ public class Food {
     private Long fdcId;        // USDA's food ID, so we don't re-fetch duplicates
     private String name;
 
-    private double calories;   // per serving
+    // Macros are per 100 g — the basis USDA's search endpoint reports for every food.
+    // A logged entry's servingSize multiplier is therefore "hundreds of grams".
+    private double calories;
     private double protein;    // grams
     private double carbs;      // grams
     private double fat;        // grams
+
+    // One USDA "serving" in grams (branded foods only), plus its household label
+    // ("1 cup", "2 tbsp"). Null when the API gives no weight-based serving.
+    private Double servingGrams;
+    private String servingText;
 
     // Usage stats, bumped every time this food is logged — drives the "frequently added" list.
     // The column default backfills rows that predate this field (ddl-auto=update, no migrations),

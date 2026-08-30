@@ -95,6 +95,8 @@ public class RecipeService {
         NutritionTotals nutrition = perServing.scale(ingredient.getServingSize()).rounded();
         return new RecipeIngredientResponse(
             ingredient.getId(), food.getId(), food.getFdcId(), food.getName(),
-            ingredient.getServingSize(), perServing.rounded(), nutrition);
+            ingredient.getServingSize(), MealService.gramsOf(ingredient.getServingSize()),
+            food.getServingGrams(), food.getServingText(),
+            perServing.rounded(), nutrition);
     }
 }

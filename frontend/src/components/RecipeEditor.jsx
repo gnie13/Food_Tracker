@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { api } from '../api'
-import { kcal, n1 } from '../util'
+import { kcal } from '../util'
 import Modal from './Modal'
 import FoodSearch from './FoodSearch'
+import QuantityInput from './QuantityInput'
 
 // Create or replace a recipe. Ingredients are a list of { food, servingSize }
-// where food is a full payload ({ fdcId, name, calories, protein, carbs, fat }).
+// where food is a full payload (fdcId, name, per-100g macros, optional weight hint)
+// and servingSize is the API multiplier.
 export default function RecipeEditor({ existing, onClose, onSaved }) {
   const [name, setName] = useState(existing?.name ?? '')
   const [ingredients, setIngredients] = useState(
@@ -17,6 +19,8 @@ export default function RecipeEditor({ existing, onClose, onSaved }) {
         protein: i.perServing.protein,
         carbs: i.perServing.carbs,
         fat: i.perServing.fat,
+        servingGrams: i.servingGrams ?? null,
+        servingText: i.servingText ?? null,
       },
       servingSize: i.servingSize,
     })),
@@ -30,8 +34,9 @@ export default function RecipeEditor({ existing, onClose, onSaved }) {
     setAdding(false)
   }
 
-  function setServing(idx, value) {
-    setIngredients((list) => list.map((row, i) => (i === idx ? { ...row, servingSize: value } : row)))
+  function setServing(idx, multiplier) {
+    setIngredients((list) =>
+      list.map((row, i) => (i === idx ? { ...row, servingSize: multiplier ?? row.servingSize } : row)))
   }
 
   function removeIngredient(idx) {
@@ -80,17 +85,17 @@ export default function RecipeEditor({ existing, onClose, onSaved }) {
           <li key={idx} className="ingredient-row">
             <div className="ingredient-main">
               <span>{row.food.name}</span>
-              <span className="muted">{kcal(row.food.calories)} / serving</span>
+              <span className="muted">
+                {kcal(row.food.calories)} / 100 g · = {kcal(row.food.calories * (row.servingSize || 0))}
+              </span>
             </div>
-            <input
-              className="input serving-input"
-              type="number"
-              min="0"
-              step="0.25"
-              value={row.servingSize}
-              onChange={(e) => setServing(idx, e.target.value)}
+            <QuantityInput
+              compact
+              initialMultiplier={row.servingSize}
+              servingGrams={row.food.servingGrams}
+              servingText={row.food.servingText}
+              onChange={(m) => setServing(idx, m)}
             />
-            <span className="muted">= {kcal(row.food.calories * (Number(row.servingSize) || 0))}</span>
             <button className="icon-btn danger" onClick={() => removeIngredient(idx)}>×</button>
           </li>
         ))}
