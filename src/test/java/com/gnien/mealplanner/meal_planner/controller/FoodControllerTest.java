@@ -1,6 +1,6 @@
 package com.gnien.mealplanner.meal_planner.controller;
 
-import com.gnien.mealplanner.meal_planner.dto.FrequentFoodResponse;
+import com.gnien.mealplanner.meal_planner.dto.StoredFoodResponse;
 import com.gnien.mealplanner.meal_planner.service.MealService;
 import com.gnien.mealplanner.meal_planner.service.UsdaFoodService;
 import org.junit.jupiter.api.Test;
@@ -15,7 +15,9 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -29,7 +31,7 @@ class FoodControllerTest {
     @Test
     void frequentUsesDefaultLimitAndReturnsList() throws Exception {
         when(mealService.frequentFoods(10)).thenReturn(List.of(
-            new FrequentFoodResponse(1L, 42L, "Banana", 100, 5, 10, 2, 7, Instant.now())));
+            new StoredFoodResponse(1L, 42L, "Banana", 100, 5, 10, 2, 7, Instant.now(), false)));
 
         mvc.perform(get("/api/foods/frequent"))
             .andExpect(status().isOk())
@@ -59,5 +61,36 @@ class FoodControllerTest {
     void frequentRejectsLimitAboveFifty() throws Exception {
         mvc.perform(get("/api/foods/frequent").param("limit", "51"))
             .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void savedReturnsList() throws Exception {
+        when(mealService.savedFoods()).thenReturn(List.of(
+            new StoredFoodResponse(1L, 42L, "Almonds", 160, 6, 6, 14, 2, Instant.now(), true)));
+
+        mvc.perform(get("/api/foods/saved"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].name").value("Almonds"))
+            .andExpect(jsonPath("$[0].saved").value(true));
+    }
+
+    @Test
+    void putSaveDelegatesWithTrue() throws Exception {
+        when(mealService.setSaved(5L, true)).thenReturn(
+            new StoredFoodResponse(5L, 42L, "Almonds", 160, 6, 6, 14, 0, null, true));
+
+        mvc.perform(put("/api/foods/5/saved"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.saved").value(true));
+
+        verify(mealService).setSaved(eq(5L), eq(true));
+    }
+
+    @Test
+    void deleteUnsaveDelegatesWithFalseAndReturns204() throws Exception {
+        mvc.perform(delete("/api/foods/5/saved"))
+            .andExpect(status().isNoContent());
+
+        verify(mealService).setSaved(eq(5L), eq(false));
     }
 }

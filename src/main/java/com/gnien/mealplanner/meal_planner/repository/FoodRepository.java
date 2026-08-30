@@ -13,4 +13,7 @@ public interface FoodRepository extends JpaRepository<Food, Long> {
     /** Most-logged foods first, breaking ties by most recently logged. */
     List<Food> findByTimesLoggedGreaterThanOrderByTimesLoggedDescLastLoggedAtDesc(
         int threshold, Pageable pageable);
+
+    /** Foods the user has pinned, alphabetised. */
+    List<Food> findBySavedTrueOrderByNameAsc();
 }
