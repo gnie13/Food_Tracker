@@ -3,19 +3,19 @@ import { api, mealLabel } from '../api'
 import { kcal, macroLine } from '../util'
 import Modal from './Modal'
 import FoodSearch from './FoodSearch'
+import QuantityInput from './QuantityInput'
 
 // Search USDA, pick a food, choose a serving multiplier, log it against the
 // given meal on the given date.
 export default function AddFoodDialog({ date, mealType, onClose, onLogged }) {
   const [picked, setPicked] = useState(null)
-  const [serving, setServing] = useState('1')
+  const [multiplier, setMultiplier] = useState(1)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
   async function log() {
-    const value = Number(serving)
-    if (!Number.isFinite(value) || value <= 0) {
-      setError('Serving size must be greater than zero.')
+    if (!multiplier || multiplier <= 0) {
+      setError('Enter a quantity greater than zero.')
       return
     }
     setBusy(true)
@@ -24,7 +24,7 @@ export default function AddFoodDialog({ date, mealType, onClose, onLogged }) {
       await api.logEntry({
         date,
         mealType,
-        servingSize: value,
+        servingSize: multiplier,
         food: {
           fdcId: picked.fdcId,
           name: picked.name,
@@ -32,6 +32,8 @@ export default function AddFoodDialog({ date, mealType, onClose, onLogged }) {
           protein: picked.protein,
           carbs: picked.carbs,
           fat: picked.fat,
+          servingGrams: picked.servingGrams ?? null,
+          servingText: picked.servingText ?? null,
         },
       })
       onLogged()
@@ -51,21 +53,18 @@ export default function AddFoodDialog({ date, mealType, onClose, onLogged }) {
           <div className="picked-food">
             <strong>{picked.name}</strong>
             <span className="muted">
-              {kcal(picked.calories)} · {macroLine(picked)} <em>per serving</em>
+              {kcal(picked.calories)} · {macroLine(picked)} <em>per 100 g</em>
             </span>
           </div>
 
           <label className="field">
-            Servings
-            <input
-              className="input"
-              type="number"
-              min="0"
-              step="0.25"
-              value={serving}
+            Quantity
+            <QuantityInput
+              initialMultiplier={1}
+              servingGrams={picked.servingGrams}
+              servingText={picked.servingText}
+              onChange={setMultiplier}
               autoFocus
-              onChange={(e) => setServing(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && log()}
             />
           </label>
 

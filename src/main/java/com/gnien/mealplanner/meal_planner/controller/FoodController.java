@@ -2,6 +2,7 @@ package com.gnien.mealplanner.meal_planner.controller;
 
 import com.gnien.mealplanner.meal_planner.dto.StoredFoodResponse;
 import com.gnien.mealplanner.meal_planner.model.Food;
+import com.gnien.mealplanner.meal_planner.model.Meal;
 import com.gnien.mealplanner.meal_planner.service.MealService;
 import com.gnien.mealplanner.meal_planner.service.UsdaFoodService;
 import jakarta.validation.constraints.Max;
@@ -33,11 +34,16 @@ public class FoodController {
         return usdaFoodService.searchFoods(query);
     }
 
-    /** Foods logged most often, for one-tap re-adding. Defaults to the top 10. */
+    /**
+     * Foods logged most often, for one-tap re-adding. With {@code mealType} the
+     * ranking is scoped to that meal (breakfast regulars vs. dinner regulars);
+     * without it, all meals. Defaults to the top 10.
+     */
     @GetMapping("/api/foods/frequent")
     public List<StoredFoodResponse> frequentFoods(
+        @RequestParam(required = false) Meal.MealType mealType,
         @RequestParam(defaultValue = "10") @Min(1) @Max(50) int limit) {
-        return mealService.frequentFoods(limit);
+        return mealService.frequentFoods(mealType, limit);
     }
 
     /** Foods the user has pinned, alphabetised. */

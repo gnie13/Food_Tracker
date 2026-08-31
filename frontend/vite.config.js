@@ -8,7 +8,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:8080',
+      // 127.0.0.1, not localhost: Node resolves localhost to ::1 first, which
+      // the Spring Boot server's IPv4 bind refuses. Override with VITE_API_TARGET.
+      '/api': process.env.VITE_API_TARGET || 'http://127.0.0.1:8080',
     },
   },
 })

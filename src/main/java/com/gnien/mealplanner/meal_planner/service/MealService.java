@@ -24,7 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Stream;
@@ -115,23 +117,37 @@ public class MealService {
         mealEntryRepository.save(entry);
     }
 
-    /** Foods the user logs most often, most-used first (ties broken by recency). */
+    /**
+     * Foods the user logs most often, most-used first (ties broken by recency).
+     * With a {@code mealType} the ranking and counts are scoped to that meal;
+     * without one they cover every meal.
+     */
     @Transactional(readOnly = true)
-    public List<StoredFoodResponse> frequentFoods(int limit) {
+    public List<StoredFoodResponse> frequentFoods(Meal.MealType mealType, int limit) {
         int capped = Math.clamp(limit, 1, MAX_FREQUENT);
+        if (mealType != null) {
+            return mealEntryRepository.frequencyByMealType(mealType, PageRequest.of(0, capped)).stream()
+                .map(row -> toStoredFoodResponse(
+                    row.getFood(), (int) row.getTimesLogged(), atStartOfDay(row.getLastDate())))
+                .toList();
+        }
         return foodRepository
             .findByTimesLoggedGreaterThanOrderByTimesLoggedDescLastLoggedAtDesc(
                 0, PageRequest.of(0, capped))
             .stream()
-            .map(MealService::toStoredFoodResponse)
+            .map(f -> toStoredFoodResponse(f, f.getTimesLogged(), f.getLastLoggedAt()))
             .toList();
+    }
+
+    private static Instant atStartOfDay(LocalDate date) {
+        return date == null ? null : date.atStartOfDay(ZoneOffset.UTC).toInstant();
     }
 
     /** Foods the user has explicitly pinned, by name. */
     @Transactional(readOnly = true)
     public List<StoredFoodResponse> savedFoods() {
         return foodRepository.findBySavedTrueOrderByNameAsc().stream()
-            .map(MealService::toStoredFoodResponse)
+            .map(f -> toStoredFoodResponse(f, f.getTimesLogged(), f.getLastLoggedAt()))
             .toList();
     }
 
@@ -142,14 +158,16 @@ public class MealService {
             .orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "No food with id " + foodId));
         food.setSaved(saved);
-        return toStoredFoodResponse(foodRepository.save(food));
+        Food stored = foodRepository.save(food);
+        return toStoredFoodResponse(stored, stored.getTimesLogged(), stored.getLastLoggedAt());
     }
 
-    private static StoredFoodResponse toStoredFoodResponse(Food f) {
+    private static StoredFoodResponse toStoredFoodResponse(Food f, int timesLogged, Instant lastLoggedAt) {
         return new StoredFoodResponse(
             f.getId(), f.getFdcId(), f.getName(),
             f.getCalories(), f.getProtein(), f.getCarbs(), f.getFat(),
-            f.getTimesLogged(), f.getLastLoggedAt(), f.isSaved());
+            f.getServingGrams(), f.getServingText(),
+            timesLogged, lastLoggedAt, f.isSaved());
     }
 
     @Transactional(readOnly = true)
@@ -265,6 +283,13 @@ public class MealService {
             .scale(entry.getServingSize())
             .rounded();
         return new MealEntryResponse(
-            entry.getId(), food.getId(), food.getName(), entry.getServingSize(), nutrition);
+            entry.getId(), food.getId(), food.getName(),
+            entry.getServingSize(), gramsOf(entry.getServingSize()),
+            food.getServingGrams(), food.getServingText(), nutrition);
+    }
+
+    /** A serving-size multiplier is "hundreds of grams" (macros are per 100 g). */
+    static double gramsOf(double servingSize) {
+        return Math.round(servingSize * 100.0 * 10.0) / 10.0;
     }
 }

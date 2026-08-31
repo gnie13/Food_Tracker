@@ -25,9 +25,13 @@ class FrequentFoodsServiceTest {
     @Autowired FoodRepository foodRepository;
 
     private void log(long fdcId, String name, int times) {
+        log(fdcId, name, Meal.MealType.SNACK, times);
+    }
+
+    private void log(long fdcId, String name, Meal.MealType meal, int times) {
         for (int i = 0; i < times; i++) {
             mealService.logEntry(new LogEntryRequest(
-                DAY, Meal.MealType.SNACK,
+                DAY, meal,
                 new FoodPayload(fdcId, name, 100.0, 5.0, 10.0, 2.0), 1.0));
         }
     }
@@ -50,7 +54,7 @@ class FrequentFoodsServiceTest {
         log(2L, "AlsoRare", 1);   // same count, logged later
         log(3L, "Common", 5);
 
-        List<StoredFoodResponse> frequent = mealService.frequentFoods(10);
+        List<StoredFoodResponse> frequent = mealService.frequentFoods(null, 10);
 
         assertThat(frequent).extracting(StoredFoodResponse::name)
             .containsExactly("Common", "AlsoRare", "Rare");
@@ -63,9 +67,26 @@ class FrequentFoodsServiceTest {
         log(2L, "B", 3);
         log(3L, "C", 2);
 
-        assertThat(mealService.frequentFoods(2)).extracting(StoredFoodResponse::name)
+        assertThat(mealService.frequentFoods(null, 2)).extracting(StoredFoodResponse::name)
             .containsExactly("A", "B");
-        assertThat(mealService.frequentFoods(0)).hasSize(1);      // clamped up to 1
-        assertThat(mealService.frequentFoods(999)).hasSize(3);    // clamped down to what exists
+        assertThat(mealService.frequentFoods(null, 0)).hasSize(1);      // clamped up to 1
+        assertThat(mealService.frequentFoods(null, 999)).hasSize(3);    // clamped down to what exists
+    }
+
+    @Test
+    void frequentFoodsAreRankedSeparatelyPerMealType() {
+        log(1L, "Coffee", Meal.MealType.BREAKFAST, 3);
+        log(2L, "Eggs", Meal.MealType.BREAKFAST, 1);
+        log(2L, "Eggs", Meal.MealType.DINNER, 4);
+        log(3L, "Steak", Meal.MealType.DINNER, 2);
+
+        assertThat(mealService.frequentFoods(Meal.MealType.BREAKFAST, 10))
+            .extracting(StoredFoodResponse::name).containsExactly("Coffee", "Eggs");
+        assertThat(mealService.frequentFoods(Meal.MealType.DINNER, 10))
+            .extracting(StoredFoodResponse::name).containsExactly("Eggs", "Steak");
+
+        // Per-meal count, not the food's lifetime total (Eggs was logged 5x overall).
+        assertThat(mealService.frequentFoods(Meal.MealType.DINNER, 10).get(0).timesLogged())
+            .isEqualTo(4);
     }
 }
