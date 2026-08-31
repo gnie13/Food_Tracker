@@ -208,6 +208,17 @@ public class MealService {
         return new RangeSummary(startDate, endDate, totals, days);
     }
 
+    /** Change a logged entry's serving-size multiplier in place, returning its meal with updated totals. */
+    @Transactional
+    public MealResponse updateEntry(Long entryId, double servingSize) {
+        MealEntry entry = mealEntryRepository.findById(entryId)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "No meal entry with id " + entryId));
+        entry.setServingSize(servingSize);
+        mealEntryRepository.save(entry);
+        return toResponse(entry.getMeal());
+    }
+
     @Transactional
     public void deleteEntry(Long entryId) {
         MealEntry entry = mealEntryRepository.findById(entryId)
